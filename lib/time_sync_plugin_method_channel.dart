@@ -24,7 +24,7 @@ class MethodChannelTimeSyncPlugin extends TimeSyncPluginPlatform {
   @override
   Future<int?> getWifiStrength() async {
     final result = await methodChannel.invokeMethod<int>('getWifiStrength');
-    debugPrint('getWifiStrength=$result');
+    debugPrint('MethodChannelTimeSyncPlugin.getWifiStrength=$result');
     return result;
   }
 }

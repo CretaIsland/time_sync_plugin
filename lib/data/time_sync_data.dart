@@ -39,6 +39,10 @@ class SyncDevice {
   }
 
   void addSyncData(SyncData syncData) {
+    if (lastSyncTime.compareTo(syncData.syncTime) == 0) {
+      // equal time ==> equal packet ==> PASS !!!
+      return;
+    }
     noReceivingCount = 0;
     if (_syncDataList.length >= 20) {
       _syncDataList.removeAt(0);

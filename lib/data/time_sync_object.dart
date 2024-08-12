@@ -95,14 +95,14 @@ class TimeSync {
         // InternetAddress inetAddr = datagram.address;
         // String ipAddr = inetAddr.address;
         String recvJson = utf8.decode(datagram.data);
-        debugPrint('recvJson=$recvJson');
+        debugPrint('[${DateTime.now().toString()}] recvJson=$recvJson');
         Map<String, dynamic> udpPacket = jsonDecode(recvJson);
         String recvDeviceId = udpPacket['deviceId'] ?? '';
         double recvWifiStrength = ((udpPacket['wifi'] ?? TimeSyncConst.minWifiStrength) as num).toDouble();
         String recvSyncTime = udpPacket['time'] ?? '';
-        debugPrint('recvDeviceId=$recvDeviceId');
-        debugPrint('recvWifiStrength=$recvWifiStrength');
-        debugPrint('recvSyncTime=$recvSyncTime');
+        debugPrint('[${DateTime.now().toString()}] recvDeviceId=$recvDeviceId');
+        debugPrint('[${DateTime.now().toString()}] recvWifiStrength=$recvWifiStrength');
+        debugPrint('[${DateTime.now().toString()}] recvSyncTime=$recvSyncTime');
         if (recvDeviceId.isEmpty || recvSyncTime.isEmpty) {
           // invalid packet ==> PASS !!!
           return;
@@ -117,13 +117,13 @@ class TimeSync {
     });
 
     while (true) {
-      loopCount++;
-      debugPrint('loopCount=$loopCount');
       await Future.delayed(const Duration(seconds: 3));
+      loopCount++;
+      debugPrint('[${DateTime.now().toString()}] loopCount=$loopCount');
       //
       int? ws = await TimeSyncPlugin.getWifiStrength();
       double currentWifiStrength = ws?.toDouble() ?? TimeSyncConst.minWifiStrength;
-      debugPrint('currentWifiStrength=$currentWifiStrength');
+      debugPrint('[${DateTime.now().toString()}] currentWifiStrength=$currentWifiStrength');
       DateTime nowUtc = DateTime.now().toUtc();
       // 1분동안은 wifi 값만 수집
       if (loopCount < 20) {
@@ -134,7 +134,7 @@ class TimeSync {
       // 1분 이후부터는 udp 브로드캐스트 (현재 단말기값도 udp로 갱신)
       syncDataSet.increaseNoReceivingCount();
       String packet = '{"deviceId":"$thisDeviceId","wifi":$currentWifiStrength,"time":"${nowUtc.toIso8601String()}"}';
-      debugPrint('sendPacket=$packet');
+      debugPrint('[${DateTime.now().toString()}] sendPacket=$packet');
       try {
         udpSocket.send(packet.codeUnits, Endpoint.broadcast(port: const Port(TimeSyncConst.udpBroadcastPort)));
       } catch (e) {

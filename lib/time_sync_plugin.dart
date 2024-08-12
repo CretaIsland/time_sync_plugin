@@ -10,6 +10,7 @@ import 'data/time_sync_object.dart';
 
 class TimeSyncPlugin {
   static final TimeSync _timeSync = TimeSync();
+  static final RootIsolateToken _rootIsolateToken = RootIsolateToken.instance!;
 
   static SyncDevice get getCurrentSyncDevice => _timeSync.getCurrentSyncDevice;
 
@@ -45,9 +46,9 @@ class TimeSyncPlugin {
     return TimeSyncPluginPlatform.instance.getWifiStrength();
   }
 
-  static void startTimeSync(String deviceId, RootIsolateToken rootIsolateToken) {
+  static void startTimeSync(String deviceId) {
     debugPrint('startTimeSync');
-    _timeSync.init(deviceId, rootIsolateToken);
+    _timeSync.init(deviceId, _rootIsolateToken);
     _timeSync.startSync();
   }
 

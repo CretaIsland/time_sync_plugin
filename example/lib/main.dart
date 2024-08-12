@@ -52,12 +52,10 @@ class _MyAppState extends State<MyApp> {
   Future<void> initSyncTime() async {
     debugPrint('initSyncTime');
 
-    RootIsolateToken rootIsolateToken = RootIsolateToken.instance!;
-
     if (kDebugMode) {
-      TimeSyncPlugin.startTimeSync('TEST-123456', rootIsolateToken);
+      TimeSyncPlugin.startTimeSync('TEST-123456');
     } else {
-      TimeSyncPlugin.startTimeSync('SQI-001642', rootIsolateToken);
+      TimeSyncPlugin.startTimeSync('SQI-001642');
     }
 
     Timer.periodic(const Duration(seconds: 3), (timer) {
@@ -71,7 +69,7 @@ class _MyAppState extends State<MyApp> {
     try {
       syncTime = DateTime.parse(TimeSyncPlugin.getCurrentSyncDevice.lastSyncTime).toLocal();
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint('EXCEPTION(2):${e.toString()}');
     }
     return MaterialApp(
       home: Scaffold(

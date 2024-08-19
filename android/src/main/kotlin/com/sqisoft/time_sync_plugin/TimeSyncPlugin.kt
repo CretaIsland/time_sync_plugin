@@ -33,6 +33,8 @@ class TimeSyncPlugin: FlutterPlugin, MethodCallHandler {
       // android native code
       // or using flutter:package:wifi_iot
       //
+      // return value : 0 ~ -100 (higher is better, lower is worst)
+      //
       result.success(0)
     } else {
       result.notImplemented()

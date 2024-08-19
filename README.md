@@ -17,3 +17,7 @@ ios
 
 linux
 - not yet... (you must complete native code)
+
+## Project Started
+
+flutter pub upgrade time_sync_plugin

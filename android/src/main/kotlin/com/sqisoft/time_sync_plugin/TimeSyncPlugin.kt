@@ -45,6 +45,8 @@ class TimeSyncPlugin: FlutterPlugin, MethodCallHandler {
 
   fun _syncTime(time: String?) {
     //
+    // time : ex)2024-08-10T12:34:56.789012Z
+    //
     // android native code for sync-time...
     //
   }

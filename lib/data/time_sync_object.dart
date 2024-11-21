@@ -4,6 +4,8 @@ import 'dart:isolate';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:udp/udp.dart';
+import 'package:dart_ping/dart_ping.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 
 import 'time_sync_const.dart';
 import 'time_sync_data.dart';
@@ -32,13 +34,22 @@ class TimeSync {
       return false;
     }
 
+    NetworkInfo networkInfo = NetworkInfo();
+    // String? wifiIP = await networkInfo.getWifiIP();
+    // String? wifiBSSID = await networkInfo.getWifiBSSID();
+    // String? wifiName = await networkInfo.getWifiName();
+    // String? wifiIPv4 = await networkInfo.getWifiIP();
+    // String? wifiIPv6 = await networkInfo.getWifiIPv6();
+    String wifiGatewayIP = await networkInfo.getWifiGatewayIP() ?? '192.168.1.1';
+    //String? wifiSubnetMask = await networkInfo.getWifiSubmask();
+
     ReceivePort receivePort = ReceivePort();
     receivePort.listen((data) {
       if (data is String) {
         // data is sync-time-string
+        debugPrint('setSyncTime($data)');
         TimeSyncPluginPlatform.instance.setSyncTime(data);
-      }
-      else if (data is SyncDevice) {
+      } else if (data is SyncDevice) {
         _currentSyncDevice = data;
       }
     });
@@ -48,12 +59,15 @@ class TimeSync {
       receivePort.sendPort,
       _deviceId,
       _rootIsolateToken,
+      TimeSyncConst.printDebugDetails,
+      wifiGatewayIP,
     ]);
     return true;
   }
 
   Future<bool> stopSync() async {
     _timeSyncIsolate?.kill();
+    _timeSyncIsolate = null;
     return true;
   }
 
@@ -61,6 +75,8 @@ class TimeSync {
     SendPort sendPort = datas[0] as SendPort;
     String thisDeviceId = datas[1] as String;
     RootIsolateToken rootIsolateToken = datas[2] as RootIsolateToken;
+    bool printDebugDetails = datas[3] as bool;
+    String wifiGatewayIP = datas[4] as String;
 
     BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
 
@@ -95,14 +111,14 @@ class TimeSync {
         // InternetAddress inetAddr = datagram.address;
         // String ipAddr = inetAddr.address;
         String recvJson = utf8.decode(datagram.data);
-        debugPrint('[${DateTime.now().toString()}] recvJson=$recvJson');
+        if (printDebugDetails) debugPrint('[${DateTime.now().toString()}] recvJson=$recvJson');
         Map<String, dynamic> udpPacket = jsonDecode(recvJson);
         String recvDeviceId = udpPacket['deviceId'] ?? '';
         double recvWifiStrength = ((udpPacket['wifi'] ?? TimeSyncConst.minWifiStrength) as num).toDouble();
         String recvSyncTime = udpPacket['time'] ?? '';
-        debugPrint('[${DateTime.now().toString()}] recvDeviceId=$recvDeviceId');
-        debugPrint('[${DateTime.now().toString()}] recvWifiStrength=$recvWifiStrength');
-        debugPrint('[${DateTime.now().toString()}] recvSyncTime=$recvSyncTime');
+        if (printDebugDetails) debugPrint('[${DateTime.now().toString()}] recvDeviceId=$recvDeviceId');
+        if (printDebugDetails) debugPrint('[${DateTime.now().toString()}] recvWifiStrength=$recvWifiStrength');
+        if (printDebugDetails) debugPrint('[${DateTime.now().toString()}] recvSyncTime=$recvSyncTime');
         if (recvDeviceId.isEmpty || recvSyncTime.isEmpty) {
           // invalid packet ==> PASS !!!
           return;
@@ -110,20 +126,63 @@ class TimeSync {
         SyncData recvSyncData = SyncData(recvWifiStrength, recvSyncTime);
         syncDataSet.syncTime(recvDeviceId, recvSyncData, (loopCount > 20));
         sendPort.send(syncDataSet.getCurrentSyncDevice);
-      } catch (e) {
+      } catch (e, stacktrace) {
         // something error
         debugPrint('EXCEPTION(1) : ${e.toString()}');
+        debugPrint('EXCEPTION(1) : ${stacktrace.toString()}');
       }
     });
 
+    const int pingCount = 1 * 365 * 24 * 60 * 60; // seconds of 1-year
+    DoubleListEx pingDataList = DoubleListEx();
+    Ping? pingObject;
+    double currentWifiStrength = TimeSyncConst.minWifiStrength;
     while (true) {
       await Future.delayed(const Duration(seconds: 3));
+
+      if (pingObject == null) {
+        pingObject = Ping(wifiGatewayIP, count: pingCount, forceCodepage: true);
+        pingObject?.stream.listen(
+          (event) {
+            //debugPrint('Ping : ${event.response?.toString()}');
+            //debugPrint('Ping : ${event.summary?.toString()}');
+            double time = -(event.response?.time?.inMilliseconds.toDouble() ?? 1000);
+            if (printDebugDetails) debugPrint('[${DateTime.now().toString()}] ping=${-time}');
+            pingDataList.add(time);
+            if (pingDataList.length > 60) pingDataList.removeHead();
+            currentWifiStrength = pingDataList.getAverage();
+          },
+          onDone: () {
+            //debugPrint('Ping : Done !!!');
+            // never occured !!! (or over 1-year?)
+          },
+          cancelOnError: false,
+          onError: (value) {
+            //debugPrint('Ping : Error !!! $value');
+            pingObject?.stop();
+            pingObject = null;
+          },
+        );
+      }
+
+      // final pingResult = await Ping(
+      //   '192.168.250.1',
+      //   count: 1,forceCodepage: true,
+      //   //encoding: const Utf8Codec(allowMalformed: true),
+      // ).stream.first;
+      // //debugPrint('Ping : $pingResult');
+      // if (pingResult.error != null || pingResult.response == null) {
+      //   debugPrint('Ping : ERROR !!!');
+      // } else if (pingResult.response != null || pingResult.error == null) {
+      //   debugPrint('Ping : $pingResult');
+      // }
+
       loopCount++;
-      debugPrint('[${DateTime.now().toString()}] loopCount=$loopCount');
+      if (printDebugDetails) debugPrint('[${DateTime.now().toString()}] loopCount=$loopCount');
       //
-      int? ws = await TimeSyncPlugin.getWifiStrength();
-      double currentWifiStrength = ws?.toDouble() ?? TimeSyncConst.minWifiStrength;
-      debugPrint('[${DateTime.now().toString()}] currentWifiStrength=$currentWifiStrength');
+      //int? ws = await TimeSyncPlugin.getWifiStrength();
+      //double currentWifiStrength = ws?.toDouble() ?? TimeSyncConst.minWifiStrength;
+      if (printDebugDetails) debugPrint('[${DateTime.now().toString()}] currentWifiStrength=$currentWifiStrength');
       DateTime nowUtc = DateTime.now().toUtc();
       // 1분동안은 wifi 값만 수집
       if (loopCount < 20) {
@@ -134,11 +193,13 @@ class TimeSync {
       // 1분 이후부터는 udp 브로드캐스트 (현재 단말기값도 udp로 갱신)
       syncDataSet.increaseNoReceivingCount();
       String packet = '{"deviceId":"$thisDeviceId","wifi":$currentWifiStrength,"time":"${nowUtc.toIso8601String()}"}';
-      debugPrint('[${DateTime.now().toString()}] sendPacket=$packet');
+      if (printDebugDetails) debugPrint('[${DateTime.now().toString()}] sendPacket=$packet');
       try {
         udpSocket.send(packet.codeUnits, Endpoint.broadcast(port: const Port(TimeSyncConst.udpBroadcastPort)));
-      } catch (e) {
+      } catch (e, stacktrace) {
         // something error
+        debugPrint('EXCEPTION(2) : ${e.toString()}');
+        debugPrint('EXCEPTION(2) : ${stacktrace.toString()}');
       }
     }
   }

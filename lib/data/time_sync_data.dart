@@ -149,3 +149,20 @@ class SyncDataSet {
     return true;
   }
 }
+
+class DoubleListEx {
+  final List<double> _list = [];
+
+  int get length => _list.length;
+
+  void add(double val) => _list.add(val);
+  void removeHead() => _list.removeAt(0);
+
+  double getAverage() {
+    double sum = 0.0;
+    for(var val in _list) {
+      sum += val;
+    }
+    return (sum / _list.length.toDouble());
+  }
+}

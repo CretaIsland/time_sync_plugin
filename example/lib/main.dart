@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:time_sync_plugin/data/time_sync_const.dart';
 import 'package:time_sync_plugin/time_sync_plugin.dart';
 
 void main() {
@@ -20,6 +21,7 @@ class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   //bool _setSyncTime = false;
   //final _timeSyncPlugin = TimeSyncPlugin();
+  String _deviceId = '';
 
   @override
   void initState() {
@@ -52,11 +54,14 @@ class _MyAppState extends State<MyApp> {
   Future<void> initSyncTime() async {
     debugPrint('initSyncTime');
 
+    TimeSyncConst.printDebugDetails = true;
+
     if (kDebugMode) {
-      TimeSyncPlugin.startTimeSync('TEST-123456');
+      _deviceId = 'TEST-123456';
     } else {
-      TimeSyncPlugin.startTimeSync('SQI-001642');
+      _deviceId = 'SQI-001642';
     }
+    TimeSyncPlugin.startTimeSync(_deviceId);
 
     Timer.periodic(const Duration(seconds: 3), (timer) {
       setState(() {});
@@ -83,6 +88,28 @@ class _MyAppState extends State<MyApp> {
               Text('Sync Device ID : ${TimeSyncPlugin.getCurrentSyncDevice.deviceId}'),
               Text('Sync Wifi Strength : ${TimeSyncPlugin.getCurrentSyncDevice.maxWifiStrength}'),
               Text('Sync Time : ${syncTime?.toString()}'),
+              Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: TextButton(
+                  style: ButtonStyle(backgroundColor: WidgetStateProperty.all(Colors.grey[300])),
+                  onPressed: () => TimeSyncPlugin.stopTimeSync(),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('Stop Timer'),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: TextButton(
+                  style: ButtonStyle(backgroundColor: WidgetStateProperty.all(Colors.grey[300])),
+                  onPressed: () => TimeSyncPlugin.startTimeSync(_deviceId),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('Start Timer'),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

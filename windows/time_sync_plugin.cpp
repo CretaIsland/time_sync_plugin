@@ -109,7 +109,7 @@ int getWifiStrength() {
     dwResult = WlanOpenHandle(dwMaxClient, NULL, &dwCurVersion, &hClient);
     if (dwResult != ERROR_SUCCESS)
     {
-        return -100;
+        return -127;
     }
 
     // Get the Interface List
@@ -117,7 +117,7 @@ int getWifiStrength() {
     if (dwResult != ERROR_SUCCESS)
     {
         WlanCloseHandle(hClient, NULL);
-        return -100;
+        return -127;
     }
 
     //Loop through the List to find the connected Interface
@@ -136,7 +136,7 @@ int getWifiStrength() {
     {
         WlanFreeMemory(pIfList);
         WlanCloseHandle(hClient, NULL);
-        return -100;
+        return -127;
     }
 
     // Query the Interface
@@ -145,14 +145,14 @@ int getWifiStrength() {
     {
         WlanFreeMemory(pIfList);
         WlanCloseHandle(hClient, NULL);
-        return -100;
+        return -127;
     }
 
     // Scan the connected SSID
     //dwResult = WlanScan(hClient, &pIfConnInfo->InterfaceGuid, /*&pConnectInfo->wlanAssociationAttributes.dot11Ssid*/NULL, NULL, NULL);
     //if (dwResult != ERROR_SUCCESS)
     //{
-    //	return -100;
+    //	return -127;
     //}
 
     // Get the BSS Entry
@@ -162,7 +162,7 @@ int getWifiStrength() {
     {
         WlanFreeMemory(pIfList);
         WlanCloseHandle(hClient, NULL);
-        return -100;
+        return -127;
     }
 
     // Get the RSSI value
